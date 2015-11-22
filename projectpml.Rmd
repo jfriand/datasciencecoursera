@@ -1,0 +1,54 @@
+---
+title: 'Practical Machine Learning: Course Project'
+author: "JFR"
+date: "November 22, 2015"
+output: html_document
+---
+
+**Background**
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, my goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to try to predict how well they did their exercise.
+
+**Training and Crossvalidation Data**
+
+The training dataset includes 19,622 observations and 160 variables. For crossvalidation purposes, I am splitting the training dataset 60/40. The "classe" variable we are trying to predict has 5 levels. Setting a seed to ensure reproducability. I also removed the missing columns.
+
+```{r}
+training <- read.csv("~/rhw/pml-training.csv")
+dim(training)
+str(training$classe)
+library(caret)
+set.seed(1432)
+inTrain <- createDataPartition(training$classe, p=0.6,list=FALSE)
+DTrain <- training[inTrain,]
+DCross <- training[-inTrain,]
+missings <-  sapply(training, function(x) {sum(is.na(x))})
+table(missings)
+misscolumns <- names(missings[missings==19216])
+DTrainnm <- DTrain[, !names(DTrain) %in% misscolumns]
+DCrossnm <- DCross[, !names(DCross) %in% misscolumns]
+```
+
+**Random Forest Model**
+
+After checking for the mosst correlated pedictors using rpart, I decided to run a random forest to test the model with the most correlated predictors.
+
+Model:
+
+trainingModel1 <- train(classe ~roll_belt+pitch_forearm+yaw_belt+magnet_dumbbell_z+roll_dumbbell+magnet_belt_y+total_accel_dumbbell, data=DTrainnm, method="rf")
+
+```{r}
+trainingModel1 <- train(classe ~roll_belt+pitch_forearm+yaw_belt+magnet_dumbbell_z+roll_dumbbell+magnet_belt_y+total_accel_dumbbell, data=DTrainnm, method="rf")
+print(trainingModel1, digits=3)
+```
+
+**Apply the predictions to my crossvalidation dataset**
+
+Using the previous random forest model and use it on my crossvalidation sample.
+
+```{r}
+predictions <- predict(trainingModel1, DCrossnm)
+print(confusionMatrix(predictions, DCrossnm$classe), digits=4)
+```
+
+The model is very good at predicting the "classe" outcome. The out of sample error is 4.19%
